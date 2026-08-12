@@ -3,7 +3,7 @@
  * Stores and manages all data in ONE unified JSON structure.
  */
 
-const STORAGE_KEY = 'morya_vinayak_expense_tracker_v1';
+const STORAGE_KEY = 'morya_vinayak_expense_tracker_v2';
 
 export const INITIAL_DATA = {
   members: [],
@@ -27,6 +27,12 @@ export const INITIAL_DATA = {
 class StorageService {
   constructor() {
     this.listeners = new Set();
+    // Automatically purge old legacy keys with dummy data
+    try {
+      localStorage.removeItem('morya_vinayak_expense_tracker_v1');
+    } catch (e) {
+      // ignore
+    }
   }
 
   subscribe(listener) {
