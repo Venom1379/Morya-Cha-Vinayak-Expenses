@@ -1,122 +1,159 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { useExpenseTracker } from './hooks/useExpenseTracker';
+import LoginView from './components/auth/LoginView';
+import AppLayout from './components/layout/AppLayout';
+import DashboardView from './components/dashboard/DashboardView';
+import MembersView from './components/members/MembersView';
+import PaymentsView from './components/payments/PaymentsView';
+import ExpensesView from './components/expenses/ExpensesView';
+import CommonPaymentsView from './components/commonPayments/CommonPaymentsView';
+import SettingsBackupModal from './components/settings/SettingsBackupModal';
+import ConfirmationModal from './components/common/ConfirmationModal';
 
-function App() {
-  const [count, setCount] = useState(0)
+function MainApp() {
+  const { isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+
+  // Deletion confirmation modal state
+  const [confirmModalState, setConfirmModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const tracker = useExpenseTracker();
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
+  // --- Deletion Dialog Handlers ---
+  const handleDeleteMemberPrompt = (id, name) => {
+    setConfirmModalState({
+      isOpen: true,
+      title: `Delete Member "${name}"?`,
+      message: `Are you sure you want to delete member "${name}"? All associated payment records for this member will also be removed permanently.`,
+      onConfirm: () => {
+        tracker.deleteMember(id);
+        setConfirmModalState({ isOpen: false });
+      }
+    });
+  };
+
+  const handleDeletePaymentPrompt = (id, amount) => {
+    setConfirmModalState({
+      isOpen: true,
+      title: 'Delete Member Payment?',
+      message: `Are you sure you want to delete payment record of ₹${amount}? Member paid balance and dashboard totals will automatically adjust.`,
+      onConfirm: () => {
+        tracker.deletePayment(id);
+        setConfirmModalState({ isOpen: false });
+      }
+    });
+  };
+
+  const handleDeleteExpensePrompt = (id, name) => {
+    setConfirmModalState({
+      isOpen: true,
+      title: `Delete Expense "${name}"?`,
+      message: `Are you sure you want to delete expense "${name}" and all of its payment history? This action cannot be undone.`,
+      onConfirm: () => {
+        tracker.deleteExpense(id);
+        setConfirmModalState({ isOpen: false });
+      }
+    });
+  };
+
+  const handleDeleteExpensePaymentPrompt = (id, amount) => {
+    setConfirmModalState({
+      isOpen: true,
+      title: 'Delete Expense Payment?',
+      message: `Are you sure you want to delete expense payment transaction of ₹${amount}? Remaining balance and status will automatically recalculate.`,
+      onConfirm: () => {
+        tracker.deleteExpensePayment(id);
+        setConfirmModalState({ isOpen: false });
+      }
+    });
+  };
+
+  const handleSelectMemberForPayment = (memberId) => {
+    setActiveTab('payments');
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <AppLayout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      onOpenBackupModal={() => setIsBackupModalOpen(true)}
+    >
+      {activeTab === 'dashboard' && <DashboardView trackerData={tracker} />}
 
-      <div className="ticks"></div>
+      {activeTab === 'members' && (
+        <MembersView
+          trackerData={tracker}
+          onAddMember={tracker.addMember}
+          onUpdateMember={tracker.updateMember}
+          onDeleteMember={handleDeleteMemberPrompt}
+        />
+      )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {activeTab === 'payments' && (
+        <PaymentsView
+          trackerData={tracker}
+          onAddPayment={tracker.addPayment}
+          onUpdatePayment={tracker.updatePayment}
+          onDeletePayment={handleDeletePaymentPrompt}
+        />
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {activeTab === 'expenses' && (
+        <ExpensesView
+          trackerData={tracker}
+          onAddExpense={tracker.addExpense}
+          onUpdateExpense={tracker.updateExpense}
+          onDeleteExpense={handleDeleteExpensePrompt}
+          onAddExpensePayment={tracker.addExpensePayment}
+          onUpdateExpensePayment={tracker.updateExpensePayment}
+          onDeleteExpensePayment={handleDeleteExpensePaymentPrompt}
+        />
+      )}
+
+      {activeTab === 'common' && (
+        <CommonPaymentsView
+          trackerData={tracker}
+          onUpdateCommonAmount={tracker.updateCommonPaymentAmount}
+          onSelectMemberForPayment={handleSelectMemberForPayment}
+        />
+      )}
+
+      {/* Backup / Restore Modal */}
+      <SettingsBackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        onExport={tracker.exportBackupJSON}
+        onImport={(parsed) => tracker.importBackupJSON(parsed)}
+        onReset={tracker.resetToDefault}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModalState.isOpen}
+        title={confirmModalState.title}
+        message={confirmModalState.message}
+        onConfirm={confirmModalState.onConfirm}
+        onCancel={() => setConfirmModalState({ isOpen: false })}
+      />
+    </AppLayout>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
+  );
+}
