@@ -33,6 +33,9 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
     name: '',
     mobile: '',
     expectedAmount: commonPayment?.amountPerMember || 0,
+    initialStatus: 'Pending',
+    initialPaymentAmount: '',
+    paymentMethod: 'Cash',
     notes: ''
   });
 
@@ -55,6 +58,9 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
       name: '',
       mobile: '',
       expectedAmount: commonPayment?.amountPerMember || 0,
+      initialStatus: 'Pending',
+      initialPaymentAmount: '',
+      paymentMethod: 'Cash',
       notes: ''
     });
     setFormError('');
@@ -67,6 +73,9 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
       name: member.name,
       mobile: member.mobile || '',
       expectedAmount: member.expectedAmount,
+      initialStatus: member.status,
+      initialPaymentAmount: '',
+      paymentMethod: 'Cash',
       notes: member.notes || ''
     });
     setFormError('');
@@ -320,7 +329,7 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
       {/* --- ADD / EDIT MEMBER MODAL --- */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="font-extrabold text-lg text-amber-300 flex items-center gap-2">
                 <Users className="w-5 h-5 text-amber-400" />
@@ -378,10 +387,80 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
                   min="0"
                   value={formData.expectedAmount}
                   onChange={(e) => setFormData({ ...formData, expectedAmount: e.target.value })}
+                  placeholder="e.g. 2000"
                   className="w-full px-3.5 py-2.5 bg-slate-950/70 border border-slate-800 focus:border-amber-500 rounded-xl font-mono text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
-                <span className="text-[10px] text-slate-500 mt-1 block">Default per-member contribution is ₹{commonPayment?.amountPerMember || 0}</span>
+                <span className="text-[10px] text-slate-500 mt-1 block">Default per-member contribution target</span>
               </div>
+
+              {!editingMember && (
+                <>
+                  <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-3">
+                    <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider">
+                      Payment Status Option
+                    </label>
+                    
+                    <div className="flex items-center gap-4 text-xs">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="initialStatus"
+                          value="Pending"
+                          checked={formData.initialStatus === 'Pending'}
+                          onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value })}
+                          className="accent-amber-500"
+                        />
+                        <span className="text-rose-400 font-semibold">Pending (Unpaid)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="initialStatus"
+                          value="Paid"
+                          checked={formData.initialStatus === 'Paid'}
+                          onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value })}
+                          className="accent-emerald-500"
+                        />
+                        <span className="text-emerald-400 font-bold">Paid</span>
+                      </label>
+                    </div>
+
+                    {formData.initialStatus === 'Paid' && (
+                      <div className="space-y-3 pt-2 border-t border-slate-800 animate-in fade-in duration-150">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                            Paid Amount (₹)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formData.initialPaymentAmount || formData.expectedAmount}
+                            onChange={(e) => setFormData({ ...formData, initialPaymentAmount: e.target.value })}
+                            placeholder={`e.g. ${formData.expectedAmount || 2000}`}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-emerald-400 font-bold text-xs focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                            Payment Method
+                          </label>
+                          <select
+                            value={formData.paymentMethod}
+                            onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none"
+                          >
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI / GPay / PhonePe</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">

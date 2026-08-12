@@ -27,12 +27,9 @@ export const INITIAL_DATA = {
 class StorageService {
   constructor() {
     this.listeners = new Set();
-    // Automatically purge old legacy keys with dummy data
     try {
       localStorage.removeItem('morya_vinayak_expense_tracker_v1');
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }
 
   subscribe(listener) {
@@ -56,7 +53,6 @@ class StorageService {
         this.saveRawData(INITIAL_DATA);
         return INITIAL_DATA;
       }
-      // Ensure array defaults
       if (!parsed.kurtaPayments) parsed.kurtaPayments = [];
       if (!parsed.kurtaSettings) parsed.kurtaSettings = { amountPerMember: 0 };
       return parsed;
@@ -76,7 +72,7 @@ class StorageService {
   }
 
   /**
-   * Get calculated data with all dynamic member, payment, expense, kurta, and dashboard totals.
+   * Get calculated data with dynamic member, payment, expense, kurta, and dashboard totals.
    */
   getCalculatedData() {
     const raw = this.getRawData();
@@ -121,7 +117,6 @@ class StorageService {
       const paymentsList = (raw.expensePayments || []).filter((ep) => ep.expenseId === exp.id);
       const totalPaid = paymentsList.reduce((sum, ep) => sum + (Number(ep.amount) || 0), 0);
       const remainingAmount = Math.max(0, totalAmount - totalPaid);
-
       const advancePayment = paymentsList.length > 0 ? Number(paymentsList[0].amount) || 0 : 0;
 
       let status = 'Pending';
@@ -142,10 +137,17 @@ class StorageService {
       };
     });
 
-    // 3. Financial Summaries
-    const totalCollection = (raw.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    // 3. Overall Financial Summaries
+    // Total Collection = Member Payments (+) + Kurta Payments (+)
+    const memberPaymentsTotal = (raw.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const kurtaPaymentsTotal = (raw.kurtaPayments || []).reduce((sum, kp) => sum + (Number(kp.amount) || 0), 0);
+    const totalCollection = memberPaymentsTotal + kurtaPaymentsTotal;
+
+    // Total Expenses = Expenses Paid (-)
     const totalExpensesSpent = (raw.expensePayments || []).reduce((sum, ep) => sum + (Number(ep.amount) || 0), 0);
     const totalExpensesBudget = (raw.expenses || []).reduce((sum, exp) => sum + (Number(exp.totalAmount) || 0), 0);
+
+    // Remaining Cash Balance = Total Collection (+) - Expenses (-)
     const remainingBalance = totalCollection - totalExpensesSpent;
 
     const paidMembersCount = members.filter((m) => m.status === 'Paid').length;
@@ -156,7 +158,7 @@ class StorageService {
 
     // 4. Kurta Summaries
     const totalKurtaExpected = members.length * kurtaCommonAmount;
-    const totalKurtaCollected = (raw.kurtaPayments || []).reduce((sum, kp) => sum + (Number(kp.amount) || 0), 0);
+    const totalKurtaCollected = kurtaPaymentsTotal;
     const kurtaPaidCount = members.filter((m) => m.kurtaStatus === 'Paid').length;
     const kurtaPendingCount = members.filter((m) => m.kurtaStatus === 'Pending').length;
 
@@ -173,12 +175,14 @@ class StorageService {
       settings: raw.settings || {},
       summary: {
         totalCollection,
+        memberPaymentsTotal,
+        kurtaPaymentsTotal,
         totalExpenses: totalExpensesSpent,
         totalExpensesBudget,
         remainingBalance,
         totalMembers: members.length,
         expectedTotalCollection,
-        remainingCollection: Math.max(0, expectedTotalCollection - totalCollection),
+        remainingCollection: Math.max(0, expectedTotalCollection - memberPaymentsTotal),
         paidMembersCount,
         partialMembersCount,
         pendingMembersCount,
@@ -195,15 +199,35 @@ class StorageService {
   // --- MEMBER ACTIONS ---
   addMember(memberData) {
     const raw = this.getRawData();
+    const expectedAmount = Number(memberData.expectedAmount) >= 0 ? Number(memberData.expectedAmount) : (raw.commonPayment?.amountPerMember || 0);
+
     const newMember = {
       id: 'mem-' + Date.now(),
       name: memberData.name.trim(),
-      mobile: memberData.mobile.trim(),
-      expectedAmount: Number(memberData.expectedAmount) >= 0 ? Number(memberData.expectedAmount) : (raw.commonPayment?.amountPerMember || 0),
+      mobile: (memberData.mobile || '').trim(),
+      expectedAmount,
       notes: memberData.notes || '',
       createdAt: memberData.createdAt || new Date().toISOString().split('T')[0]
     };
     raw.members.push(newMember);
+
+    // Initial Payment handling if user selected "Paid" or specified initial payment amount
+    const initialPaidAmount = Number(memberData.initialPaymentAmount);
+    if (memberData.initialStatus === 'Paid' || initialPaidAmount > 0) {
+      const amountToRecord = initialPaidAmount > 0 ? initialPaidAmount : expectedAmount;
+      if (amountToRecord > 0) {
+        raw.payments.push({
+          id: 'pay-' + Date.now(),
+          memberId: newMember.id,
+          amount: amountToRecord,
+          date: newMember.createdAt,
+          method: memberData.paymentMethod || 'Cash',
+          reference: 'Initial Member Payment',
+          notes: 'Recorded during member creation'
+        });
+        this.logActivity(raw, 'PAYMENT', `₹${amountToRecord.toLocaleString('en-IN')} payment recorded for new member ${newMember.name}`);
+      }
+    }
 
     this.logActivity(raw, 'MEMBER_ADDED', `New member "${newMember.name}" added`);
     this.saveRawData(raw);
@@ -217,7 +241,7 @@ class StorageService {
       raw.members[index] = {
         ...raw.members[index],
         name: updatedData.name.trim(),
-        mobile: updatedData.mobile.trim(),
+        mobile: (updatedData.mobile || '').trim(),
         expectedAmount: Number(updatedData.expectedAmount) >= 0 ? Number(updatedData.expectedAmount) : raw.members[index].expectedAmount,
         notes: updatedData.notes || ''
       };
