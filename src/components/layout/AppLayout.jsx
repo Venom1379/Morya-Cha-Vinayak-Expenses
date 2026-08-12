@@ -6,11 +6,11 @@ import {
   Receipt,
   Users,
   Layers,
+  Shirt,
   LogOut,
   Menu,
   X,
-  Database,
-  Flame
+  Database
 } from 'lucide-react';
 
 export default function AppLayout({ activeTab, setActiveTab, onOpenBackupModal, children }) {
@@ -23,6 +23,7 @@ export default function AppLayout({ activeTab, setActiveTab, onOpenBackupModal, 
     { id: 'expenses', label: 'Expenses', icon: Receipt },
     { id: 'members', label: 'Members', icon: Users },
     { id: 'common', label: 'Common Payments', icon: Layers },
+    { id: 'kurta', label: 'Kurta', icon: Shirt },
   ];
 
   const handleNavClick = (id) => {

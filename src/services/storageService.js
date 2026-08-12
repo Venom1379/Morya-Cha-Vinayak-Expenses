@@ -6,161 +6,18 @@
 const STORAGE_KEY = 'morya_vinayak_expense_tracker_v1';
 
 export const INITIAL_DATA = {
-  members: [
-    {
-      id: 'mem-1',
-      name: 'Rahul Deshmukh',
-      mobile: '9876543210',
-      expectedAmount: 2000,
-      notes: 'President / Main organizer',
-      createdAt: '2026-08-01'
-    },
-    {
-      id: 'mem-2',
-      name: 'Amit Patil',
-      mobile: '9822114455',
-      expectedAmount: 2000,
-      notes: 'Treasurer',
-      createdAt: '2026-08-01'
-    },
-    {
-      id: 'mem-3',
-      name: 'Priya Kulkarni',
-      mobile: '9765432109',
-      expectedAmount: 2000,
-      notes: 'Cultural Lead',
-      createdAt: '2026-08-02'
-    },
-    {
-      id: 'mem-4',
-      name: 'Suresh Shinde',
-      mobile: '9988776655',
-      expectedAmount: 2000,
-      notes: 'Decoration team',
-      createdAt: '2026-08-03'
-    },
-    {
-      id: 'mem-5',
-      name: 'Vikas More',
-      mobile: '9123456789',
-      expectedAmount: 2000,
-      notes: 'Volunteers co-ordinator',
-      createdAt: '2026-08-04'
-    }
-  ],
-  payments: [
-    {
-      id: 'pay-1',
-      memberId: 'mem-1',
-      amount: 2000,
-      date: '2026-08-05',
-      method: 'UPI',
-      reference: 'UPI/7839201948',
-      notes: 'Full payment via GPay'
-    },
-    {
-      id: 'pay-2',
-      memberId: 'mem-2',
-      amount: 2000,
-      date: '2026-08-06',
-      method: 'Bank Transfer',
-      reference: 'NEFT/8849201',
-      notes: 'Direct transfer to account'
-    },
-    {
-      id: 'pay-3',
-      memberId: 'mem-3',
-      amount: 1000,
-      date: '2026-08-08',
-      method: 'Cash',
-      reference: 'CASH-001',
-      notes: 'First installment paid in cash'
-    }
-  ],
-  expenses: [
-    {
-      id: 'exp-1',
-      name: 'Ganpati Murti',
-      category: 'Murti',
-      vendor: 'Shree Ganesh Kalakendra',
-      totalAmount: 25000,
-      date: '2026-08-02',
-      notes: '6ft Clay idol booking'
-    },
-    {
-      id: 'exp-2',
-      name: 'Sound & DJ System',
-      category: 'DJ',
-      vendor: 'Dhananjay DJ Sound',
-      totalAmount: 20000,
-      date: '2026-08-03',
-      notes: 'Visarjan miravand setup'
-    },
-    {
-      id: 'exp-3',
-      name: 'Mandap Decoration & Lighting',
-      category: 'Decoration',
-      vendor: 'Royal Decorators',
-      totalAmount: 18000,
-      date: '2026-08-04',
-      notes: 'Flower and LED entrance'
-    },
-    {
-      id: 'exp-4',
-      name: 'Maha Prasad & Catering',
-      category: 'Food',
-      vendor: 'Swad Catering Service',
-      totalAmount: 15000,
-      date: '2026-08-07',
-      notes: 'Prasad for 500 devotees'
-    }
-  ],
-  expensePayments: [
-    {
-      id: 'exp-pay-1',
-      expenseId: 'exp-1',
-      amount: 10000,
-      date: '2026-08-02',
-      notes: 'Advance booking payment'
-    },
-    {
-      id: 'exp-pay-2',
-      expenseId: 'exp-2',
-      amount: 5000,
-      date: '2026-08-03',
-      notes: 'Initial advance'
-    },
-    {
-      id: 'exp-pay-3',
-      expenseId: 'exp-3',
-      amount: 18000,
-      date: '2026-08-09',
-      notes: 'Full payment completed'
-    }
-  ],
+  members: [],
+  payments: [],
+  expenses: [],
+  expensePayments: [],
+  kurtaPayments: [],
   commonPayment: {
-    amountPerMember: 2000
+    amountPerMember: 0
   },
-  activityLog: [
-    {
-      id: 'act-1',
-      type: 'PAYMENT',
-      message: '₹2,000 payment received from Rahul Deshmukh',
-      timestamp: '2026-08-05T10:30:00.000Z'
-    },
-    {
-      id: 'act-2',
-      type: 'EXPENSE_PAYMENT',
-      message: 'Murti advance ₹10,000 paid to Shree Ganesh Kalakendra',
-      timestamp: '2026-08-02T14:15:00.000Z'
-    },
-    {
-      id: 'act-3',
-      type: 'MEMBER_ADDED',
-      message: 'New member Vikas More added',
-      timestamp: '2026-08-04T09:00:00.000Z'
-    }
-  ],
+  kurtaSettings: {
+    amountPerMember: 0
+  },
+  activityLog: [],
   settings: {
     title: 'Morya Cha Vinayak Expenses',
     year: '2026'
@@ -189,11 +46,13 @@ class StorageService {
         return INITIAL_DATA;
       }
       const parsed = JSON.parse(stored);
-      // Validate schema minimum requirements
-      if (!parsed.members || !parsed.payments || !parsed.expenses || !parsed.expensePayments) {
+      if (!parsed.members || !parsed.payments || !parsed.expenses) {
         this.saveRawData(INITIAL_DATA);
         return INITIAL_DATA;
       }
+      // Ensure array defaults
+      if (!parsed.kurtaPayments) parsed.kurtaPayments = [];
+      if (!parsed.kurtaSettings) parsed.kurtaSettings = { amountPerMember: 0 };
       return parsed;
     } catch (e) {
       console.error('Failed to parse localStorage data:', e);
@@ -211,11 +70,12 @@ class StorageService {
   }
 
   /**
-   * Get calculated data with all dynamic member, payment, expense, and dashboard totals.
+   * Get calculated data with all dynamic member, payment, expense, kurta, and dashboard totals.
    */
   getCalculatedData() {
     const raw = this.getRawData();
     const commonAmount = Number(raw.commonPayment?.amountPerMember) || 0;
+    const kurtaCommonAmount = Number(raw.kurtaSettings?.amountPerMember) || 0;
 
     // 1. Process Members
     const members = (raw.members || []).map((m) => {
@@ -231,13 +91,21 @@ class StorageService {
         status = 'Partial';
       }
 
+      // Kurta Payment Info for this member
+      const kurtaPaymentRecord = (raw.kurtaPayments || []).find((kp) => kp.memberId === m.id);
+      const kurtaAmountPaid = kurtaPaymentRecord ? Number(kurtaPaymentRecord.amount) || 0 : 0;
+      const kurtaStatus = (kurtaPaymentRecord && kurtaPaymentRecord.status === 'Paid') || (kurtaCommonAmount > 0 && kurtaAmountPaid >= kurtaCommonAmount) ? 'Paid' : 'Pending';
+
       return {
         ...m,
         expectedAmount,
         amountPaid,
         remainingAmount,
         status,
-        paymentsCount: memberPayments.length
+        paymentsCount: memberPayments.length,
+        kurtaStatus,
+        kurtaAmountPaid,
+        kurtaPaymentRecord
       };
     });
 
@@ -268,7 +136,7 @@ class StorageService {
       };
     });
 
-    // 3. Overall Financial Summaries
+    // 3. Financial Summaries
     const totalCollection = (raw.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const totalExpensesSpent = (raw.expensePayments || []).reduce((sum, ep) => sum + (Number(ep.amount) || 0), 0);
     const totalExpensesBudget = (raw.expenses || []).reduce((sum, exp) => sum + (Number(exp.totalAmount) || 0), 0);
@@ -280,13 +148,21 @@ class StorageService {
 
     const expectedTotalCollection = members.length * commonAmount;
 
+    // 4. Kurta Summaries
+    const totalKurtaExpected = members.length * kurtaCommonAmount;
+    const totalKurtaCollected = (raw.kurtaPayments || []).reduce((sum, kp) => sum + (Number(kp.amount) || 0), 0);
+    const kurtaPaidCount = members.filter((m) => m.kurtaStatus === 'Paid').length;
+    const kurtaPendingCount = members.filter((m) => m.kurtaStatus === 'Pending').length;
+
     return {
       raw,
       members,
       payments: (raw.payments || []).sort((a, b) => new Date(b.date) - new Date(a.date)),
       expenses,
       expensePayments: raw.expensePayments || [],
-      commonPayment: raw.commonPayment || { amountPerMember: 2000 },
+      kurtaPayments: raw.kurtaPayments || [],
+      commonPayment: raw.commonPayment || { amountPerMember: 0 },
+      kurtaSettings: raw.kurtaSettings || { amountPerMember: 0 },
       activityLog: (raw.activityLog || []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)),
       settings: raw.settings || {},
       summary: {
@@ -299,7 +175,13 @@ class StorageService {
         remainingCollection: Math.max(0, expectedTotalCollection - totalCollection),
         paidMembersCount,
         partialMembersCount,
-        pendingMembersCount
+        pendingMembersCount,
+        // Kurta metrics
+        totalKurtaExpected,
+        totalKurtaCollected,
+        kurtaCommonAmount,
+        kurtaPaidCount,
+        kurtaPendingCount
       }
     };
   }
@@ -311,7 +193,7 @@ class StorageService {
       id: 'mem-' + Date.now(),
       name: memberData.name.trim(),
       mobile: memberData.mobile.trim(),
-      expectedAmount: Number(memberData.expectedAmount) >= 0 ? Number(memberData.expectedAmount) : (raw.commonPayment?.amountPerMember || 2000),
+      expectedAmount: Number(memberData.expectedAmount) >= 0 ? Number(memberData.expectedAmount) : (raw.commonPayment?.amountPerMember || 0),
       notes: memberData.notes || '',
       createdAt: memberData.createdAt || new Date().toISOString().split('T')[0]
     };
@@ -344,10 +226,10 @@ class StorageService {
     const memberName = member ? member.name : 'Member';
     
     raw.members = raw.members.filter((m) => m.id !== id);
-    // Also delete payments for this member
     raw.payments = raw.payments.filter((p) => p.memberId !== id);
+    raw.kurtaPayments = raw.kurtaPayments.filter((kp) => kp.memberId !== id);
 
-    this.logActivity(raw, 'MEMBER_DELETED', `Member "${memberName}" and associated payments removed`);
+    this.logActivity(raw, 'MEMBER_DELETED', `Member "${memberName}" and associated records removed`);
     this.saveRawData(raw);
   }
 
@@ -415,7 +297,6 @@ class StorageService {
     };
     raw.expenses.push(newExpense);
 
-    // If advance payment was supplied during creation
     if (Number(expenseData.advanceAmount) > 0) {
       raw.expensePayments.push({
         id: 'exp-pay-' + Date.now(),
@@ -508,14 +389,61 @@ class StorageService {
     this.saveRawData(raw);
   }
 
+  // --- KURTA MODULE ACTIONS ---
+  updateKurtaCommonAmount(amount) {
+    const raw = this.getRawData();
+    const newAmount = Number(amount) >= 0 ? Number(amount) : 0;
+    if (!raw.kurtaSettings) raw.kurtaSettings = {};
+    raw.kurtaSettings.amountPerMember = newAmount;
+
+    this.logActivity(raw, 'KURTA_SETTINGS', `Kurta common amount updated to ₹${newAmount.toLocaleString('en-IN')}`);
+    this.saveRawData(raw);
+  }
+
+  setMemberKurtaStatus(memberId, status, paymentDetails = {}) {
+    const raw = this.getRawData();
+    if (!raw.kurtaPayments) raw.kurtaPayments = [];
+
+    const member = (raw.members || []).find((m) => m.id === memberId);
+    const memberName = member ? member.name : 'Member';
+
+    const index = raw.kurtaPayments.findIndex((kp) => kp.memberId === memberId);
+    const kurtaAmount = Number(paymentDetails.amount) >= 0 ? Number(paymentDetails.amount) : (raw.kurtaSettings?.amountPerMember || 0);
+
+    if (status === 'Paid') {
+      const record = {
+        id: index !== -1 ? raw.kurtaPayments[index].id : 'kp-' + Date.now(),
+        memberId,
+        status: 'Paid',
+        amount: kurtaAmount,
+        date: paymentDetails.date || new Date().toISOString().split('T')[0],
+        method: paymentDetails.method || 'Cash',
+        notes: paymentDetails.notes || ''
+      };
+      if (index !== -1) {
+        raw.kurtaPayments[index] = record;
+      } else {
+        raw.kurtaPayments.push(record);
+      }
+      this.logActivity(raw, 'KURTA_PAYMENT', `Kurta payment ₹${kurtaAmount.toLocaleString('en-IN')} received from ${memberName}`);
+    } else {
+      // Mark as Pending
+      if (index !== -1) {
+        raw.kurtaPayments.splice(index, 1);
+      }
+      this.logActivity(raw, 'KURTA_PAYMENT', `Kurta status for ${memberName} marked as Pending`);
+    }
+
+    this.saveRawData(raw);
+  }
+
   // --- COMMON PAYMENT SETTINGS ---
   updateCommonPaymentAmount(amount) {
     const raw = this.getRawData();
-    const newAmount = Number(amount) >= 0 ? Number(amount) : 2000;
+    const newAmount = Number(amount) >= 0 ? Number(amount) : 0;
     if (!raw.commonPayment) raw.commonPayment = {};
     raw.commonPayment.amountPerMember = newAmount;
 
-    // Update members who don't have explicit custom expectedAmount
     this.logActivity(raw, 'SETTINGS_UPDATED', `Common contribution set to ₹${newAmount.toLocaleString('en-IN')} per member`);
     this.saveRawData(raw);
   }
@@ -540,16 +468,14 @@ class StorageService {
     if (!parsedData || typeof parsedData !== 'object') {
       throw new Error('Invalid JSON format');
     }
-    if (!Array.isArray(parsedData.members) || !Array.isArray(parsedData.expenses)) {
-      throw new Error('JSON backup must contain valid "members" and "expenses" arrays.');
-    }
-
     const cleanData = {
       members: parsedData.members || [],
       payments: parsedData.payments || [],
       expenses: parsedData.expenses || [],
       expensePayments: parsedData.expensePayments || [],
-      commonPayment: parsedData.commonPayment || { amountPerMember: 2000 },
+      kurtaPayments: parsedData.kurtaPayments || [],
+      commonPayment: parsedData.commonPayment || { amountPerMember: 0 },
+      kurtaSettings: parsedData.kurtaSettings || { amountPerMember: 0 },
       activityLog: parsedData.activityLog || [],
       settings: parsedData.settings || {}
     };
@@ -562,6 +488,10 @@ class StorageService {
     this.saveRawData(INITIAL_DATA);
   }
 
+  clearAllData() {
+    this.saveRawData(INITIAL_DATA);
+  }
+
   // --- HELPER ACTIVITY LOGGER ---
   logActivity(rawObj, type, message) {
     if (!rawObj.activityLog) rawObj.activityLog = [];
@@ -571,7 +501,6 @@ class StorageService {
       message,
       timestamp: new Date().toISOString()
     });
-    // Keep max 50 recent activities
     if (rawObj.activityLog.length > 50) {
       rawObj.activityLog = rawObj.activityLog.slice(0, 50);
     }

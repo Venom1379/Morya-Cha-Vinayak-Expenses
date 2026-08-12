@@ -29,9 +29,14 @@ export function useExpenseTracker() {
 
   const updateCommonPaymentAmount = useCallback((amount) => storageService.updateCommonPaymentAmount(amount), []);
 
+  // Kurta Module functions
+  const updateKurtaCommonAmount = useCallback((amount) => storageService.updateKurtaCommonAmount(amount), []);
+  const setMemberKurtaStatus = useCallback((memberId, status, paymentDetails) => storageService.setMemberKurtaStatus(memberId, status, paymentDetails), []);
+
   const exportBackupJSON = useCallback(() => storageService.exportBackupJSON(), []);
   const importBackupJSON = useCallback((parsedData) => storageService.importBackupJSON(parsedData), []);
   const resetToDefault = useCallback(() => storageService.resetToDefault(), []);
+  const clearAllData = useCallback(() => storageService.clearAllData(), []);
 
   return {
     ...data,
@@ -48,8 +53,11 @@ export function useExpenseTracker() {
     updateExpensePayment,
     deleteExpensePayment,
     updateCommonPaymentAmount,
+    updateKurtaCommonAmount,
+    setMemberKurtaStatus,
     exportBackupJSON,
     importBackupJSON,
-    resetToDefault
+    resetToDefault,
+    clearAllData
   };
 }

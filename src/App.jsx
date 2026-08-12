@@ -8,6 +8,7 @@ import MembersView from './components/members/MembersView';
 import PaymentsView from './components/payments/PaymentsView';
 import ExpensesView from './components/expenses/ExpensesView';
 import CommonPaymentsView from './components/commonPayments/CommonPaymentsView';
+import KurtaView from './components/kurta/KurtaView';
 import SettingsBackupModal from './components/settings/SettingsBackupModal';
 import ConfirmationModal from './components/common/ConfirmationModal';
 
@@ -129,13 +130,21 @@ function MainApp() {
         />
       )}
 
+      {activeTab === 'kurta' && (
+        <KurtaView
+          trackerData={tracker}
+          onUpdateKurtaCommonAmount={tracker.updateKurtaCommonAmount}
+          onSetMemberKurtaStatus={tracker.setMemberKurtaStatus}
+        />
+      )}
+
       {/* Backup / Restore Modal */}
       <SettingsBackupModal
         isOpen={isBackupModalOpen}
         onClose={() => setIsBackupModalOpen(false)}
         onExport={tracker.exportBackupJSON}
         onImport={(parsed) => tracker.importBackupJSON(parsed)}
-        onReset={tracker.resetToDefault}
+        onReset={tracker.clearAllData}
       />
 
       {/* Confirmation Modal */}
