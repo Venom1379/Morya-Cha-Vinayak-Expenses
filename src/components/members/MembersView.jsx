@@ -32,7 +32,7 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
-    expectedAmount: commonPayment?.amountPerMember || 2000,
+    expectedAmount: commonPayment?.amountPerMember || 0,
     notes: ''
   });
 
@@ -40,9 +40,10 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
 
   // Filter Members
   const filteredMembers = members.filter((m) => {
+    const mobileStr = m.mobile || '';
     const matchesSearch =
       m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.mobile.includes(searchTerm);
+      mobileStr.includes(searchTerm);
     const matchesStatus =
       statusFilter === 'ALL' || m.status.toUpperCase() === statusFilter;
     return matchesSearch && matchesStatus;
@@ -53,7 +54,7 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
     setFormData({
       name: '',
       mobile: '',
-      expectedAmount: commonPayment?.amountPerMember || 2000,
+      expectedAmount: commonPayment?.amountPerMember || 0,
       notes: ''
     });
     setFormError('');
@@ -64,7 +65,7 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
     setEditingMember(member);
     setFormData({
       name: member.name,
-      mobile: member.mobile,
+      mobile: member.mobile || '',
       expectedAmount: member.expectedAmount,
       notes: member.notes || ''
     });
@@ -76,10 +77,6 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
     e.preventDefault();
     if (!formData.name.trim()) {
       setFormError('Member name is required.');
-      return;
-    }
-    if (!formData.mobile.trim() || formData.mobile.trim().length < 10) {
-      setFormError('Valid 10-digit mobile number is required.');
       return;
     }
 
@@ -183,7 +180,7 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
                         {m.notes && <div className="text-[11px] text-slate-400">{m.notes}</div>}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-slate-300">
-                        {m.mobile}
+                        {m.mobile || '—'}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-slate-200">
                         {formatCurrency(m.expectedAmount)}
@@ -253,10 +250,12 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-extrabold text-slate-100 text-base">{m.name}</h3>
-                    <p className="text-xs font-mono text-slate-400 flex items-center gap-1 mt-0.5">
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      {m.mobile}
-                    </p>
+                    {m.mobile && (
+                      <p className="text-xs font-mono text-slate-400 flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3 text-slate-400" />
+                        {m.mobile}
+                      </p>
+                    )}
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.badgeClass}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dotClass}`} />
@@ -358,15 +357,14 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Mobile Number <span className="text-rose-400">*</span>
+                  Mobile Number <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="tel"
-                  required
                   maxLength={10}
                   value={formData.mobile}
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })}
-                  placeholder="e.g. 9876543210"
+                  placeholder="e.g. 9876543210 (Optional)"
                   className="w-full px-3.5 py-2.5 bg-slate-950/70 border border-slate-800 focus:border-amber-500 rounded-xl font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
               </div>
@@ -382,7 +380,7 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
                   onChange={(e) => setFormData({ ...formData, expectedAmount: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-slate-950/70 border border-slate-800 focus:border-amber-500 rounded-xl font-mono text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
-                <span className="text-[10px] text-slate-500 mt-1 block">Default per-member contribution is ₹{commonPayment?.amountPerMember}</span>
+                <span className="text-[10px] text-slate-500 mt-1 block">Default per-member contribution is ₹{commonPayment?.amountPerMember || 0}</span>
               </div>
 
               <div>
@@ -425,9 +423,11 @@ export default function MembersView({ trackerData, onAddMember, onUpdateMember, 
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <h3 className="font-extrabold text-lg text-slate-100">{viewingMember.name}</h3>
-                <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                  <Phone className="w-3 h-3" /> {viewingMember.mobile}
-                </p>
+                {viewingMember.mobile && (
+                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                    <Phone className="w-3 h-3" /> {viewingMember.mobile}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setViewingMember(null)}
